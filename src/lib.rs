@@ -22,14 +22,14 @@ impl Circle {
 
     pub fn get_energy(&self, bounds: Vector2<f64>, gravity: f64) -> f64 {
         let kinetic_energy = 0.5 * self.mass * self.velocity.sqr_length();
-        let gravitational_potental_energy = self.mass * gravity * (self.position.y - -bounds.y);
+        let gravitational_potental_energy = 0.0; // self.mass * gravity * (self.position.y - self.radius - -bounds.y);
         kinetic_energy + gravitational_potental_energy
     }
 }
 
 pub fn update_circles(circles: &mut [Circle], bounds: Vector2<f64>, gravity: f64, ts: f64) {
     for circle in circles.iter_mut() {
-        circle.acceleration.y -= gravity;
+        // circle.acceleration.y -= gravity;
         circle.velocity += circle.acceleration * ts.into();
         circle.position += circle.velocity * ts.into();
     }

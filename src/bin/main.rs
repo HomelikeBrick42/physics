@@ -9,13 +9,13 @@ use thallium::{
     scene::{Camera, CameraProjectionType, Transform},
 };
 
-const SCALE: f64 = 10.0;
+const SCALE: f64 = 100.0;
 const FIXED_UPDATE_RATE: f64 = 1.0 / 200.0;
 const BOUNDS: Vector2<f64> = Vector2 {
     x: SCALE * 0.95,
     y: SCALE * 0.95,
 };
-const CIRCLE_COUNT: usize = 5;
+const CIRCLE_COUNT: usize = 1000;
 const GRAVITY: f64 = 9.81;
 
 fn main() {
@@ -40,38 +40,38 @@ fn main() {
 
     let mut camera = Camera::default();
 
-    let mut circles = vec![Circle {
-        position: Vector2::zero(),
-        velocity: Vector2::zero(),
-        acceleration: Vector2::zero(),
-        mass: 1.0,
-        radius: 1.0,
-    }];
-    // let mut circles = std::iter::repeat_with({
-    //     let mut rng = rand::thread_rng();
-    //     move || {
-    //         let radius = rng.gen_range(0.5..1.0);
-    //         let position_range = -BOUNDS.x + radius..BOUNDS.x - radius;
-    //         let velocity_range = -10.0..10.0;
-    //         Circle {
-    //             position: (
-    //                 rng.gen_range(position_range.clone()),
-    //                 rng.gen_range(position_range),
-    //             )
-    //                 .into(),
-    //             velocity: (
-    //                 rng.gen_range(velocity_range.clone()),
-    //                 rng.gen_range(velocity_range),
-    //             )
-    //                 .into(),
-    //             acceleration: Vector2::zero(),
-    //             mass: PI * radius * radius,
-    //             radius,
-    //         }
-    //     }
-    // })
-    // .take(CIRCLE_COUNT)
-    // .collect::<Vec<_>>();
+    // let mut circles = vec![Circle {
+    //     position: Vector2::zero(),
+    //     velocity: Vector2::zero(),
+    //     acceleration: Vector2::zero(),
+    //     mass: 1.0,
+    //     radius: 1.0,
+    // }];
+    let mut circles = std::iter::repeat_with({
+        let mut rng = rand::thread_rng();
+        move || {
+            let radius = rng.gen_range(0.5..1.75);
+            let position_range = -BOUNDS.x + radius..BOUNDS.x - radius;
+            let velocity_range = -20.0..20.0;
+            Circle {
+                position: (
+                    rng.gen_range(position_range.clone()),
+                    rng.gen_range(position_range),
+                )
+                    .into(),
+                velocity: (
+                    rng.gen_range(velocity_range.clone()),
+                    rng.gen_range(velocity_range),
+                )
+                    .into(),
+                acceleration: Vector2::zero(),
+                mass: PI * radius * radius,
+                radius,
+            }
+        }
+    })
+    .take(CIRCLE_COUNT)
+    .collect::<Vec<_>>();
 
     let mut last_time = std::time::Instant::now();
 
