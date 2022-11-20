@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use lerp::Lerp;
 use thallium::{
-    math::Vector2,
+    math::{Vector2, Zero},
     renderer::{IndexBufferID, PrimitiveType, RendererDrawContext, ShaderID, VertexBufferID},
     scene::Transform,
 };
@@ -10,29 +10,56 @@ use thallium::{
 pub struct Circle {
     pub position: Vector2<f64>,
     pub velocity: Vector2<f64>,
+    pub acceleration: Vector2<f64>,
     pub mass: f64,
     pub radius: f64,
 }
 
-pub fn update_circles(circles: &mut [Circle], bounds: Vector2<f64>, ts: f64) {
+impl Circle {
+    pub fn add_force(&mut self, force: Vector2<f64>) {
+        self.acceleration += force / self.mass.into();
+    }
+
+    pub fn get_energy(&self, bounds: Vector2<f64>, gravity: f64) -> f64 {
+        let kinetic_energy = 0.5 * self.mass * self.velocity.sqr_length();
+        let gravitational_potental_energy = self.mass * gravity * (self.position.y - -bounds.y);
+        kinetic_energy + gravitational_potental_energy
+    }
+}
+
+pub fn update_circles(circles: &mut [Circle], bounds: Vector2<f64>, gravity: f64, ts: f64) {
     for circle in circles.iter_mut() {
+        circle.acceleration.y -= gravity;
+        circle.velocity += circle.acceleration * ts.into();
         circle.position += circle.velocity * ts.into();
     }
+    let mut collisions = HashSet::with_capacity(circles.len());
     loop {
-        let mut collisions = HashSet::new();
         for i in 0..circles.len() {
             let a = &mut circles[i];
             if a.velocity.y > 0.0 && a.position.y + a.radius > bounds.y {
+                //a.position.y -= (a.position.y + a.radius - bounds.y) * 2.0;
                 a.velocity.y *= -1.0;
+                collisions.insert(i);
+                continue;
             }
             if a.velocity.y < 0.0 && a.position.y - a.radius < -bounds.y {
+                //a.position.y += (a.position.y - a.radius - -bounds.y) * 2.0;
                 a.velocity.y *= -1.0;
+                collisions.insert(i);
+                continue;
             }
             if a.velocity.x > 0.0 && a.position.x + a.radius > bounds.x {
+                //a.position.x -= (a.position.x + a.radius - bounds.x) * 2.0;
                 a.velocity.x *= -1.0;
+                collisions.insert(i);
+                continue;
             }
             if a.velocity.x < 0.0 && a.position.x - a.radius < -bounds.x {
+                //a.position.x += (a.position.x - a.radius - -bounds.x) * 2.0;
                 a.velocity.x *= -1.0;
+                collisions.insert(i);
+                continue;
             }
             for j in i + 1..circles.len() {
                 let (a, b) = {
@@ -67,6 +94,10 @@ pub fn update_circles(circles: &mut [Circle], bounds: Vector2<f64>, ts: f64) {
         if collisions.is_empty() {
             break;
         }
+        collisions.clear();
+    }
+    for circle in circles.iter_mut() {
+        circle.acceleration = Vector2::zero();
     }
 }
 
@@ -76,14 +107,14 @@ pub fn render_circles(
     vertex_buffer: VertexBufferID,
     index_buffer: IndexBufferID,
     circles: &[Circle],
+    bounds: Vector2<f64>,
+    gravity: f64,
 ) {
     let total_energy: f64 = circles
         .iter()
-        .map(|circle| {
-            let speed = circle.velocity.length();
-            0.5 * circle.mass * speed * speed
-        })
+        .map(|circle| circle.get_energy(bounds, gravity))
         .sum();
+    println!("{total_energy}");
     for circle in circles {
         draw_context.draw_indexed(
             PrimitiveType::TriangleStrip,
@@ -98,8 +129,7 @@ pub fn render_circles(
             }
             .into(),
             {
-                let speed = circle.velocity.length();
-                let energy = 0.5 * circle.mass * speed * speed;
+                let energy = circle.get_energy(bounds, gravity);
 
                 let slow_r = 50.0 / 255.0;
                 let slow_g = 100.0 / 255.0;
