@@ -1,7 +1,8 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, f64::consts::PI};
 
 use lerp::Lerp;
 use physics::Circle;
+use rand::Rng;
 use thallium::{
     math::Vector2,
     platform::{Surface, SurfaceEvent},
@@ -25,24 +26,29 @@ fn main() {
 
     let mut camera = Camera::default();
 
-    let mut circles = std::iter::repeat_with(|| {
-        let radius = 1.0;
-        Circle {
-            position: (
-                (rand::random::<f64>() * 2.0 - 1.0) * BOUNDS.x - radius,
-                (rand::random::<f64>() * 2.0 - 1.0) * BOUNDS.y - radius,
-            )
-                .into(),
-            velocity: (
-                (rand::random::<f64>() * 2.0 - 1.0) * 6.0,
-                (rand::random::<f64>() * 2.0 - 1.0) * 6.0,
-            )
-                .into(),
-            mass: 1.0,
-            radius,
+    let mut circles = std::iter::repeat_with({
+        let mut rng = rand::thread_rng();
+        move || {
+            let radius = rng.gen_range(0.5..1.75);
+            let position_range = -BOUNDS.x + radius..BOUNDS.x - radius;
+            let velocity_range = -20.0..20.0;
+            Circle {
+                position: (
+                    rng.gen_range(position_range.clone()),
+                    rng.gen_range(position_range),
+                )
+                    .into(),
+                velocity: (
+                    rng.gen_range(velocity_range.clone()),
+                    rng.gen_range(velocity_range),
+                )
+                    .into(),
+                mass: PI * radius * radius,
+                radius,
+            }
         }
     })
-    .take(60)
+    .take(100)
     .collect::<Vec<_>>();
 
     let mut last_time = std::time::Instant::now();
@@ -77,16 +83,16 @@ fn main() {
         fixed_update_time += ts;
         while fixed_update_time >= FIXED_UPDATE_RATE {
             update(&mut circles, FIXED_UPDATE_RATE);
-            let energy: f64 = circles
-                .iter()
-                .map(|circle| {
-                    let speed = circle.velocity.length();
-                    0.5 * circle.mass * speed * speed
-                })
-                .sum();
-            _ = energy;
             fixed_update_time -= FIXED_UPDATE_RATE;
         }
+
+        let total_energy: f64 = circles
+            .iter()
+            .map(|circle| {
+                let speed = circle.velocity.length();
+                0.5 * circle.mass * speed * speed
+            })
+            .sum();
 
         renderer.clear((0.1, 0.1, 0.1).into());
         {
@@ -116,11 +122,13 @@ fn main() {
                         let fast_g = 100.0 / 255.0;
                         let fast_b = 70.0 / 255.0;
 
-                        const DIVISOR: f64 = 2.0;
                         (
-                            slow_r.lerp(fast_r, energy / DIVISOR) as f32,
-                            slow_g.lerp(fast_g, energy / DIVISOR) as f32,
-                            slow_b.lerp(fast_b, energy / DIVISOR) as f32,
+                            slow_r.lerp(fast_r, energy * circles.len() as f64 / total_energy)
+                                as f32,
+                            slow_g.lerp(fast_g, energy * circles.len() as f64 / total_energy)
+                                as f32,
+                            slow_b.lerp(fast_b, energy * circles.len() as f64 / total_energy)
+                                as f32,
                         )
                             .into()
                     },
@@ -132,8 +140,8 @@ fn main() {
     renderer.get_surface_mut().hide();
 }
 
-const SCALE: f64 = 20.0;
-const FIXED_UPDATE_RATE: f64 = 1.0 / 60.0;
+const SCALE: f64 = 30.0;
+const FIXED_UPDATE_RATE: f64 = 1.0 / 200.0;
 const BOUNDS: Vector2<f64> = Vector2 { x: SCALE, y: SCALE };
 
 fn update(circles: &mut [Circle], ts: f64) {
