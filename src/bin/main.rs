@@ -9,7 +9,7 @@ use thallium::{
     scene::{Camera, CameraProjectionType, Transform},
 };
 
-const SCALE: f64 = 100.0;
+const SCALE: f64 = 150.0;
 const FIXED_UPDATE_RATE: f64 = 1.0 / 200.0;
 const BOUNDS: Vector2<f64> = Vector2 {
     x: SCALE * 0.95,
@@ -40,13 +40,6 @@ fn main() {
 
     let mut camera = Camera::default();
 
-    // let mut circles = vec![Circle {
-    //     position: Vector2::zero(),
-    //     velocity: Vector2::zero(),
-    //     acceleration: Vector2::zero(),
-    //     mass: 1.0,
-    //     radius: 1.0,
-    // }];
     let mut circles = std::iter::repeat_with({
         let mut rng = rand::thread_rng();
         move || {
@@ -64,7 +57,6 @@ fn main() {
                     rng.gen_range(velocity_range),
                 )
                     .into(),
-                acceleration: Vector2::zero(),
                 mass: PI * radius * radius,
                 radius,
             }

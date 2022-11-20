@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use lerp::Lerp;
 use thallium::{
-    math::{Vector2, Zero},
+    math::Vector2,
     renderer::{IndexBufferID, PrimitiveType, RendererDrawContext, ShaderID, VertexBufferID},
     scene::Transform,
 };
@@ -10,28 +10,32 @@ use thallium::{
 pub struct Circle {
     pub position: Vector2<f64>,
     pub velocity: Vector2<f64>,
-    pub acceleration: Vector2<f64>,
     pub mass: f64,
     pub radius: f64,
 }
 
 impl Circle {
-    pub fn add_force(&mut self, force: Vector2<f64>) {
-        self.acceleration += force / self.mass.into();
+    pub fn get_energy(&self) -> f64 {
+        let kinetic_energy = 0.5 * self.mass * self.velocity.sqr_length();
+        kinetic_energy
     }
 
-    pub fn get_energy(&self, bounds: Vector2<f64>, gravity: f64) -> f64 {
-        let kinetic_energy = 0.5 * self.mass * self.velocity.sqr_length();
-        let gravitational_potental_energy = 0.0; // self.mass * gravity * (self.position.y - self.radius - -bounds.y);
-        kinetic_energy + gravitational_potental_energy
+    pub fn get_potential_energy(&self, bounds: Vector2<f64>, gravity: f64) -> f64 {
+        let gravitational_potental_energy =
+            self.mass * gravity * (self.position.y - self.radius - -bounds.y);
+        gravitational_potental_energy
+    }
+
+    pub fn get_total_energy(&self, bounds: Vector2<f64>, gravity: f64) -> f64 {
+        self.get_energy() + self.get_potential_energy(bounds, gravity)
     }
 }
 
 pub fn update_circles(circles: &mut [Circle], bounds: Vector2<f64>, gravity: f64, ts: f64) {
     for circle in circles.iter_mut() {
-        // circle.acceleration.y -= gravity;
-        circle.velocity += circle.acceleration * ts.into();
+        circle.velocity.y -= gravity * 0.5 * ts;
         circle.position += circle.velocity * ts.into();
+        circle.velocity.y -= gravity * 0.5 * ts;
     }
     let mut collisions = HashSet::with_capacity(circles.len());
     loop {
@@ -96,9 +100,6 @@ pub fn update_circles(circles: &mut [Circle], bounds: Vector2<f64>, gravity: f64
         }
         collisions.clear();
     }
-    for circle in circles.iter_mut() {
-        circle.acceleration = Vector2::zero();
-    }
 }
 
 pub fn render_circles(
@@ -112,7 +113,7 @@ pub fn render_circles(
 ) {
     let total_energy: f64 = circles
         .iter()
-        .map(|circle| circle.get_energy(bounds, gravity))
+        .map(|circle| circle.get_total_energy(bounds, gravity))
         .sum();
     println!("{total_energy}");
     for circle in circles {
@@ -129,7 +130,7 @@ pub fn render_circles(
             }
             .into(),
             {
-                let energy = circle.get_energy(bounds, gravity);
+                let energy = circle.get_energy();
 
                 let slow_r = 50.0 / 255.0;
                 let slow_g = 100.0 / 255.0;

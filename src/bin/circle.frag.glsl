@@ -10,7 +10,7 @@ uniform sampler2D u_Texture;
 
 void main() {
   o_Color = vec4(u_Color, 1.0) * texture(u_Texture, v_TexCoord);
-  if (abs(dot(v_Position, v_Position) - 0.9) >= 0.1) {
+  if (dot(v_Position, v_Position) >= 1.0) {
     discard;
   }
 }
